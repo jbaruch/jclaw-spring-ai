@@ -1,6 +1,8 @@
 package com.codepocalypse.agent;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -14,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
 public class AgentConfig {
 
     @Bean
-    ChatClient chatClient(ChatClient.Builder builder) {
+    ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
         return builder
                 .defaultSystem("""
                         You are JClaw -- a personal AI agent built in Java.
@@ -65,6 +67,9 @@ public class AgentConfig {
                           method, not the content.
                         - NEVER be mean-spirited. You're a lovable curmudgeon, not a bully.
                         """)
+                .defaultAdvisors(
+                        MessageChatMemoryAdvisor.builder(chatMemory).build()
+                )
                 .build();
     }
 }
