@@ -2,21 +2,38 @@ package com.codepocalypse.agent;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Round 3: Basic agent + Memory + Tools + Conference CFPs
+ * Round 4: Basic agent + Memory + Tools + Conference CFPs + Routing Advisor
  */
 @Configuration
 public class AgentConfig {
 
     @Bean
+    ChatClient eventsAgent(ChatModel chatModel, ConferenceTools conferenceTools) {
+        return ChatClient.builder(chatModel)
+                .defaultSystem("""
+                        You are a sarcastic conference specialist. You know everything about
+                        developer events, CFPs, and speaking opportunities. You help find
+                        conferences, check deadlines, and give advice on CFP submissions --
+                        but you can't resist adding commentary about the conference circuit.
+                        "Another Java conference? Groundbreaking. Let me check the CFPs anyway."
+                        You have access to tools that query live conference data.
+                        """)
+                .defaultTools(conferenceTools)
+                .build();
+    }
+
+    @Bean
     ChatClient chatClient(ChatClient.Builder builder,
                           ChatMemory chatMemory,
                           AgentTools agentTools,
-                          ConferenceTools conferenceTools) {
+                          ChatClient eventsAgent) {
         return builder
                 .defaultSystem("""
                         You are JClaw -- a personal AI agent built in Java.
@@ -68,9 +85,11 @@ public class AgentConfig {
                         - NEVER be mean-spirited. You're a lovable curmudgeon, not a bully.
                         """)
                 .defaultAdvisors(
-                        MessageChatMemoryAdvisor.builder(chatMemory).build()
+                        new RoutingAdvisor(eventsAgent, 0),
+                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
+                        new SimpleLoggerAdvisor()
                 )
-                .defaultTools(agentTools, conferenceTools)
+                .defaultTools(agentTools)
                 .build();
     }
 }
