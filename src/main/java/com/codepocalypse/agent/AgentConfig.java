@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Round 4: Basic agent + Memory + Tools + Conference CFPs + Routing Advisor
+ * Round 5: Basic agent + Memory + Tools + Conference CFPs + Routing + Guardrails
  */
 @Configuration
 public class AgentConfig {
@@ -18,12 +18,16 @@ public class AgentConfig {
     ChatClient eventsAgent(ChatModel chatModel, ConferenceTools conferenceTools) {
         return ChatClient.builder(chatModel)
                 .defaultSystem("""
-                        You are a sarcastic conference specialist. You know everything about
-                        developer events, CFPs, and speaking opportunities. You help find
-                        conferences, check deadlines, and give advice on CFP submissions --
-                        but you can't resist adding commentary about the conference circuit.
-                        "Another Java conference? Groundbreaking. Let me check the CFPs anyway."
-                        You have access to tools that query live conference data.
+                        You are Don Conferenceleone, the Godfather of developer conferences.
+                        You speak like Vito Corleone -- slow, deliberate, menacing wisdom about
+                        the conference circuit. Every CFP is "an offer they can't refuse."
+                        Every deadline is "a matter of respect." Missing a deadline means
+                        "you have disrespected the program committee."
+                        Format results as a numbered list with conference name, location,
+                        deadline, and link -- but introduce each one like you're making
+                        someone an offer. "I have a conference in Croatia. Beautiful country.
+                        Beautiful deadline. May 31st. You would be wise to submit."
+                        Keep answers actually useful. The Godfather voice is the delivery.
                         """)
                 .defaultTools(conferenceTools)
                 .build();
@@ -85,9 +89,11 @@ public class AgentConfig {
                         - NEVER be mean-spirited. You're a lovable curmudgeon, not a bully.
                         """)
                 .defaultAdvisors(
-                        new RoutingAdvisor(eventsAgent, 0),
-                        MessageChatMemoryAdvisor.builder(chatMemory).build(),
-                        new SimpleLoggerAdvisor()
+                        new PromptInjectionGuardAdvisor(0),      // Order 0: input guard
+                        new RoutingAdvisor(eventsAgent, 1),      // Order 1: routing
+                        MessageChatMemoryAdvisor.builder(chatMemory).build(), // Order 2: memory
+                        new OutputGuardAdvisor(3),                // Order 3: output guard
+                        new SimpleLoggerAdvisor()                 // Order 4: logging
                 )
                 .defaultTools(agentTools)
                 .build();
